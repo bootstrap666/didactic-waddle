@@ -13,8 +13,6 @@ else:
     from cr.sparse import lop
     from jax import random
     import jax.numpy as jnp
-    seed = 777
-    key = random.PRNGKey(seed)
 
 
 class csImagecodec:
@@ -23,16 +21,28 @@ class csImagecodec:
         self.__wavelet_family = wavelet_family
         self.__savevideo = save_video
         self.__weighthistory = weighthistory
+        if self.__iswindowsmachine:
+            seed = 777
+            self.__key = random.PRNGKey(seed)
+            
 
-    def encode_image(self, img, compression_pct):
+    def encode_image(self, img, compression_pct, wavelet_level):
         [x, self.__shape] = self.imageToVector(img)
+        img_array = np.array(img)
 
         if self.__iswindowsmachine:
-            coeffs = pywt.wavedec(np.array(x), self.__wavelet_family, level=8)
+            coeffs = pywt.wavedec2(img_array, self.__wavelet_family, level=wavelet_level)
             self.__xw, self.__coeff_slices = pywt.coeffs_to_array(coeffs)
+            # coeffs = pywt.wavedec(np.array(x), self.__wavelet_family, level=8)
+            # self.__xw, self.__coeff_slices = pywt.coeffs_to_array(coeffs)
         else:
-            self._DWT_op = lop.dwt(len(x), wavelet=self.__wavelet_family, level=8)
-            self.__xw = self._DWT_op.times(x)
+            DWT2_op = lop.dwt2D(self.__shape, wavelet=self.__wavelet_family, level=wavelet_level)
+            DWT2_op = lop.jit(DWT2_op)
+            coeffs = DWT2_op.times(img_array)
+            self.__xw = np.reshape(coeffs, np.prod(shape))
+            
+            #self._DWT_op = lop.dwt(len(x), wavelet=self.__wavelet_family, level=8)
+            #self.__xw = self._DWT_op.times(x)
 
         N = len(self.__xw)
         M = int(compression_pct*N)
@@ -41,8 +51,8 @@ class csImagecodec:
             self.A = np.random.normal(loc=0.0, scale=1.0/N, size=(N,M)) # Matriz de medição
             y = np.transpose(self.A) @ self.__xw
         else:
-            self.A = (1.0/jnp.sqrt(N)) * random.normal(key, shape=(N,M))
-            key, subkey = random.split(key)
+            self.A = (1.0/jnp.sqrt(N)) * random.normal(self.__key, shape=(N,M))
+            self.__key, self.__subkey = random.split(self.__key)
             y = jnp.transpose(self.A) @ self.__xw
         return y
     
@@ -61,8 +71,8 @@ class csImagecodec:
               B = jnp.linalg.inv(jnp.transpose(self.A) @ self.A)
               quiescent = self.A  @ (B @ y)
               P = jnp.subtract(jnp.eye(N), self.A @ B @ jnp.transpose(self.A))
-              xc = jnp.add(quiescent, P @ random.normal(subkey, shape=(N,)))
-              key, subkey = random.split(key)
+              xc = jnp.add(quiescent, P @ random.normal(self.__subkey, shape=(N,)))
+              self.__key, self.__subkey = random.split(self.__key)
         j = 0
         if (self.__weighthistory):
             self.__weights = np.zeros((N,int(iterations/decimation)))
@@ -84,13 +94,22 @@ class csImagecodec:
         xc2 = np.zeros((N))
         aux = np.abs(xc)
         xc2[aux.argsort()[-M:]] = xc[aux.argsort()[-M:]]
+
+        coeffs_rec = np.reshape(xc2, self.__shape)
+        
         if windowsMachine():
-            coeffs_from_arr = pywt.array_to_coeffs(xc2, self.__coeff_slices, output_format='wavedec')
-            x_rec = pywt.waverec(coeffs_from_arr, self.__wavelet_family)
+            coeffs_from_arr = pywt.array_to_coeffs(coefs_rec, self.__coeff_slices, output_format='wavedec')
+            x_rec = pywt.waverec2(coeffs_from_arr, self.__wavelet_family)
+            
+            # coeffs_from_arr = pywt.array_to_coeffs(xc2, self.__coeff_slices, output_format='wavedec')
+            # x_rec = pywt.waverec(coeffs_from_arr, self.__wavelet_family)
         else:
-            x_rec = self._DWT_op.trans(xc2)
+            x_rec = DWT2_op.trans(coeffs_rec)
+
+            # x_rec = self._DWT_op.trans(xc2)
+        imgrec = Image.fromarray(np.uint8(x_rec), 'L')
 		
-        [imgrec,arrrec] = self.vectorToImage(x_rec, self.__shape)
+        #[imgrec,arrrec] = self.vectorToImage(x_rec, self.__shape)
             
         return imgrec
 #plt.imshow(arrrec)
