@@ -21,7 +21,7 @@ class csImagecodec:
         self.__wavelet_family = wavelet_family
         self.__savevideo = save_video
         self.__weighthistory = weighthistory
-        if self.__iswindowsmachine:
+        if not self.__iswindowsmachine:
             seed = 777
             self.__key = random.PRNGKey(seed)
             
