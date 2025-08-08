@@ -33,14 +33,14 @@ class csImagecodec:
         if self.__iswindowsmachine:
             coeffs = pywt.wavedec2(img_array, self.__wavelet_family, level=wavelet_level)
             godinez, self.__coeff_slices = pywt.coeffs_to_array(coeffs)
-            self.__xw = np.reshape(godinez, np.prod(shape))
+            self.__xw = np.reshape(godinez, np.prod(self.__shape))
             # coeffs = pywt.wavedec(np.array(x), self.__wavelet_family, level=8)
             # self.__xw, self.__coeff_slices = pywt.coeffs_to_array(coeffs)
         else:
             DWT2_op = lop.dwt2D(self.__shape, wavelet=self.__wavelet_family, level=wavelet_level)
             DWT2_op = lop.jit(DWT2_op)
             coeffs = DWT2_op.times(img_array)
-            self.__xw = np.reshape(coeffs, np.prod(shape))
+            self.__xw = np.reshape(coeffs, np.prod(self.__shape))
             
             #self._DWT_op = lop.dwt(len(x), wavelet=self.__wavelet_family, level=8)
             #self.__xw = self._DWT_op.times(x)
