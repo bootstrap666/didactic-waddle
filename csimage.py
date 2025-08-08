@@ -32,7 +32,8 @@ class csImagecodec:
 
         if self.__iswindowsmachine:
             coeffs = pywt.wavedec2(img_array, self.__wavelet_family, level=wavelet_level)
-            self.__xw, self.__coeff_slices = pywt.coeffs_to_array(coeffs)
+            godinez, self.__coeff_slices = pywt.coeffs_to_array(coeffs)
+            self.__xw = np.reshape(godinez, np.prod(shape))
             # coeffs = pywt.wavedec(np.array(x), self.__wavelet_family, level=8)
             # self.__xw, self.__coeff_slices = pywt.coeffs_to_array(coeffs)
         else:
