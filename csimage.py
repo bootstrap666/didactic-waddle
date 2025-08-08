@@ -101,7 +101,7 @@ class csImagecodec:
         coeffs_rec = np.reshape(xc2, self.__shape)
         
         if windowsMachine():
-            coeffs_from_arr = pywt.array_to_coeffs(coeffs_rec, self.__coeff_slices, output_format='wavedec')
+            coeffs_from_arr = pywt.array_to_coeffs(coeffs_rec, self.__coeff_slices, output_format='wavedec2')
             x_rec = pywt.waverec2(coeffs_from_arr, self.__wavelet_family)
             
             # coeffs_from_arr = pywt.array_to_coeffs(xc2, self.__coeff_slices, output_format='wavedec')
