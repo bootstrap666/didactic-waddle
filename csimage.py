@@ -27,6 +27,7 @@ class csImagecodec:
             
 
     def encode_image(self, img, compression_pct, wavelet_level):
+        self.__compression_pct = compression_pct
         [x, self.__shape] = self.imageToVector(img)
         img_array = np.array(img)
 
@@ -46,7 +47,7 @@ class csImagecodec:
             #self.__xw = self._DWT_op.times(x)
 
         N = len(self.__xw)
-        M = int(compression_pct*N)
+        M = int(self.__compression_pct*N)
 
         if self.__iswindowsmachine:
             self.A = np.random.normal(loc=0.0, scale=1.0/N, size=(N,M)) # Matriz de medição
@@ -60,6 +61,7 @@ class csImagecodec:
     def decode_image(self,decimation,iterations,step_size,y):
 
         N = len(self.__xw)
+        M = int(self.__compression_pct*N)
         if self.__iswindowsmachine:
               #y = np.transpose(self.A) @ xw
               B = np.linalg.inv(np.transpose(self.A) @ self.A) # economizando tempo de processamento calculando essa inversa somente uma vez
