@@ -1,0 +1,138 @@
+# -*- coding: utf-8 -*-
+import os
+import torch
+import numpy as np
+from PIL import Image, ImageOps
+import matplotlib.pyplot as plt
+from tqdm.notebook import tqdm
+def windowsMachine():
+    return (os.name == 'nt') or (not torch.cuda.is_available())
+if windowsMachine():
+    import pywt
+else:
+    from cr.sparse import lop
+    from jax import random
+    import jax.numpy as jnp
+    seed = 777
+    key = random.PRNGKey(seed)
+
+
+class csImagecodec:
+    def __init__(self,wavelet_family,save_video,weighthistory):
+        self.__iswindowsmachine = windowsMachine()
+        self.__wavelet_family = wavelet_family
+        self.__savevideo = save_video
+        self.__weighthistory = weighthistory
+
+    def encode_image(self, img, compression_pct):
+        [x, self.__shape] = self.imageToVector(img)
+
+        if self.__iswindowsmachine:
+            coeffs = pywt.wavedec(np.array(x), self.__wavelet_family, level=8)
+            self.__xw, self.__coeff_slices = pywt.coeffs_to_array(coeffs)
+        else:
+            self._DWT_op = lop.dwt(len(x), wavelet=self.__wavelet_family, level=8)
+            self.__xw = self._DWT_op.times(x)
+
+        N = len(self.__xw)
+        M = int(compression_pct*N)
+
+        if self.__iswindowsmachine:
+            self.A = np.random.normal(loc=0.0, scale=1.0/N, size=(N,M)) # Matriz de medição
+            y = np.transpose(self.A) @ self.__xw
+        else:
+            self.A = (1.0/jnp.sqrt(N)) * random.normal(key, shape=(N,M))
+            key, subkey = random.split(key)
+            y = jnp.transpose(self.A) @ self.__xw
+        return y
+    
+    def decode_image(self,decimation,iterations,step_size,y):
+
+        N = len(self.__xw)
+        if self.__iswindowsmachine:
+              y = np.transpose(self.A) @ xw
+              B = np.linalg.inv(np.transpose(self.A) @ self.A) # economizando tempo de processamento calculando essa inversa somente uma vez
+              quiescent = self.A  @ (B @ y)
+
+              P = (np.eye(N) - self.A @ B @ np.transpose(self.A))
+              xc = (P @ np.random.normal(0,1,size=(N))) + quiescent
+        else: # Tentando tirar proveito de operações em JAX
+              y = jnp.transpose(self.A) @ xw
+              B = jnp.linalg.inv(jnp.transpose(self.A) @ self.A)
+              quiescent = self.A  @ (B @ y)
+              P = jnp.subtract(jnp.eye(N), self.A @ B @ jnp.transpose(self.A))
+              xc = jnp.add(quiescent, P @ random.normal(subkey, shape=(N,)))
+              key, subkey = random.split(key)
+        j = 0
+        if (self.__weighthistory):
+            self.__weights = np.zeros((N,int(iterations/decimation)))
+
+        if self.__iswindowsmachine:
+            for i in tqdm(range(iterations)):
+                xc = P@(xc - step_size*np.sign(xc)) + quiescent
+                if (self.__weighthistory and (not (i % decimation))):
+                    self.__weights[:,j] = xc
+                    j = j+1
+        else:
+            for i in tqdm(range(iterations)):
+                xc = jnp.add(P@(jnp.subtract(xc,step_size*jnp.sign(xc))),quiescent)
+                if (self.__weighthistory and (not (i % decimation))):
+                    self.__weights[:,j] = xc
+                    j = j+1
+        
+        #Gambiarra que zera os coeficientes de menor magnitude
+        xc2 = np.zeros((N))
+        aux = np.abs(xc)
+        xc2[aux.argsort()[-M:]] = xc[aux.argsort()[-M:]]
+        if windowsMachine():
+            coeffs_from_arr = pywt.array_to_coeffs(xc2, self.__coeff_slices, output_format='wavedec')
+            x_rec = pywt.waverec(coeffs_from_arr, self.__wavelet_family)
+        else:
+            x_rec = self._DWT_op.trans(xc2)
+		
+        [imgrec,arrrec] = self.vectorToImage(x_rec, self.__shape)
+            
+        return imgrec
+#plt.imshow(arrrec)
+    
+    def plot_weights_history(self,iterations,decimation):
+        if (self.__weighthistory):
+            xwvector = np.array(self.__xw)[np.newaxis]
+            weighterrorvectorhistory = self.__weights- (xwvector.T @ np.ones((1, int(iterations/decimation))))
+            plt.plot(weighterrorvectorhistory.T)
+
+    def save_video(self, iterations,decimation):
+        if (self.__weighthistory and self.__savevideo):
+            nimages = int(iterations/decimation)
+            ndigits = int(np.ceil(np.log10(nimages)))
+        for i in range(nimages):
+            if self.__iswindowsmachine:
+                coeffs_from_arr = pywt.array_to_coeffs(self.__weights[:,i], self.__coeff_slices, output_format='wavedec')
+                x_im = pywt.waverec(coeffs_from_arr, self.__wavelet_family)
+            else:
+                x_im = self._DWT_op.trans(self.__weights[:,i])
+
+        filename = "img"+str(i).zfill(ndigits)+".png"
+        self.vectorToFile(x_im,shape,filename)
+        os.system("ffmpeg -r 10 -i img%0"+str(ndigits)+"d.png -vcodec mpeg4 -y a.mp4")
+    
+#Projeção lexicográfica
+    def imageToVector(self,img):
+        arr = np.array(img)
+
+        shape = arr.shape
+
+        vector = np.reshape(arr, np.prod(shape))
+        return vector, shape
+
+    def vectorToImage(self, vector, shape):
+        arr2 = np.asarray(vector.astype('uint8')).reshape(shape)
+
+        img2 = Image.fromarray(arr2.astype(np.uint8), 'L')
+        return img2, arr2
+
+    def vectorToFile(vector,shape,filename):
+        img, arr = vectorToImage(vector, shape)
+        rgbimg = Image.new("RGBA", shape)
+        rgbimg.paste(img)
+        rgbimg.save(filename)
