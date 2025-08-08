@@ -60,14 +60,14 @@ class csImagecodec:
 
         N = len(self.__xw)
         if self.__iswindowsmachine:
-              y = np.transpose(self.A) @ xw
+              #y = np.transpose(self.A) @ xw
               B = np.linalg.inv(np.transpose(self.A) @ self.A) # economizando tempo de processamento calculando essa inversa somente uma vez
               quiescent = self.A  @ (B @ y)
 
               P = (np.eye(N) - self.A @ B @ np.transpose(self.A))
               xc = (P @ np.random.normal(0,1,size=(N))) + quiescent
         else: # Tentando tirar proveito de operações em JAX
-              y = jnp.transpose(self.A) @ xw
+              #y = jnp.transpose(self.A) @ xw
               B = jnp.linalg.inv(jnp.transpose(self.A) @ self.A)
               quiescent = self.A  @ (B @ y)
               P = jnp.subtract(jnp.eye(N), self.A @ B @ jnp.transpose(self.A))
