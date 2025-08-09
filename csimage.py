@@ -129,10 +129,13 @@ class csImagecodec:
             ndigits = int(np.ceil(np.log10(nimages)))
         for i in range(nimages):
             if self.__iswindowsmachine:
-                coeffs_from_arr = pywt.array_to_coeffs(self.__weights[:,i], self.__coeff_slices, output_format='wavedec')
-                x_im = pywt.waverec(coeffs_from_arr, self.__wavelet_family)
+                coeffs_from_arr = pywt.array_to_coeffs(self.__weights[:,i], self.__coeff_slices, output_format='wavedec2')
+                x_im = pywt.waverec2(coeffs_from_arr, self.__wavelet_family)
+                # coeffs_from_arr = pywt.array_to_coeffs(self.__weights[:,i], self.__coeff_slices, output_format='wavedec')
+                # x_im = pywt.waverec(coeffs_from_arr, self.__wavelet_family)
             else:
                 x_im = self.__DWT2_op.trans(self.__weights[:,i])
+                # x_im = self.__DWT2_op.trans(self.__weights[:,i])
 
         filename = "img"+str(i).zfill(ndigits)+".png"
         self.vectorToFile(x_im,shape,filename)
