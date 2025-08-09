@@ -137,8 +137,11 @@ class csImagecodec:
                 x_im = self.__DWT2_op.trans(self.__weights[:,i])
                 # x_im = self.__DWT2_op.trans(self.__weights[:,i])
 
-        filename = "img"+str(i).zfill(ndigits)+".png"
-        self.vectorToFile(x_im,self.__shape,filename)
+            filename = "img"+str(i).zfill(ndigits)+".png"
+        # self.vectorToFile(x_im,self.__shape,filename)
+            imgrec = Image.fromarray(np.uint8(x_im), 'L')
+            imgrec.save(filename)
+
         os.system("ffmpeg -r 10 -i img%0"+str(ndigits)+"d.png -vcodec mpeg4 -y a.mp4")
     
 #Projeção lexicográfica
