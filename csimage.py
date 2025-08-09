@@ -39,8 +39,8 @@ class csImagecodec:
             # self.__xw, self.__coeff_slices = pywt.coeffs_to_array(coeffs)
         else:
             DWT2_op = lop.dwt2D(self.__shape, wavelet=self.__wavelet_family, level=wavelet_level)
-            DWT2_op = lop.jit(DWT2_op)
-            coeffs = DWT2_op.times(img_array)
+            self.__DWT2_op = lop.jit(DWT2_op)
+            coeffs = self.__DWT2_op.times(img_array)
             self.__xw = np.reshape(coeffs, np.prod(self.__shape))
             
             #self._DWT_op = lop.dwt(len(x), wavelet=self.__wavelet_family, level=8)
@@ -107,7 +107,7 @@ class csImagecodec:
             # coeffs_from_arr = pywt.array_to_coeffs(xc2, self.__coeff_slices, output_format='wavedec')
             # x_rec = pywt.waverec(coeffs_from_arr, self.__wavelet_family)
         else:
-            x_rec = DWT2_op.trans(coeffs_rec)
+            x_rec = self.__DWT2_op.trans(coeffs_rec)
 
             # x_rec = self._DWT_op.trans(xc2)
         imgrec = Image.fromarray(np.uint8(x_rec), 'L')
