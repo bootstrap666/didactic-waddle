@@ -132,7 +132,7 @@ class csImagecodec:
                 coeffs_from_arr = pywt.array_to_coeffs(self.__weights[:,i], self.__coeff_slices, output_format='wavedec')
                 x_im = pywt.waverec(coeffs_from_arr, self.__wavelet_family)
             else:
-                x_im = self._DWT_op.trans(self.__weights[:,i])
+                x_im = self.__DWT2_op.trans(self.__weights[:,i])
 
         filename = "img"+str(i).zfill(ndigits)+".png"
         self.vectorToFile(x_im,shape,filename)
