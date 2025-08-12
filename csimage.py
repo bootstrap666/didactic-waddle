@@ -127,24 +127,24 @@ class csImagecodec:
         if (self.__weighthistory and self.__savevideo):
             nimages = int(iterations/decimation)
             ndigits = int(np.ceil(np.log10(nimages)))
-        for i in range(nimages):
-            coeffs = np.reshape(self.__weights[:,i], self.__shape)
+            for i in range(nimages):
+                coeffs = np.reshape(self.__weights[:,i], self.__shape)
             
-            if self.__iswindowsmachine:
-                coeffs_from_arr = pywt.array_to_coeffs(coeffs, self.__coeff_slices, output_format='wavedec2')
-                x_im = pywt.waverec2(coeffs_from_arr, self.__wavelet_family)
-                # coeffs_from_arr = pywt.array_to_coeffs(self.__weights[:,i], self.__coeff_slices, output_format='wavedec')
-                # x_im = pywt.waverec(coeffs_from_arr, self.__wavelet_family)
-            else:
-                x_im = self.__DWT2_op.trans(coeffs)
-                # x_im = self.__DWT2_op.trans(self.__weights[:,i])
+                if self.__iswindowsmachine:
+                    coeffs_from_arr = pywt.array_to_coeffs(coeffs, self.__coeff_slices, output_format='wavedec2')
+                    x_im = pywt.waverec2(coeffs_from_arr, self.__wavelet_family)
+                    # coeffs_from_arr = pywt.array_to_coeffs(self.__weights[:,i], self.__coeff_slices, output_format='wavedec')
+                    # x_im = pywt.waverec(coeffs_from_arr, self.__wavelet_family)
+                else:
+                    x_im = self.__DWT2_op.trans(coeffs)
+                    # x_im = self.__DWT2_op.trans(self.__weights[:,i])
 
-            filename = "img"+str(i).zfill(ndigits)+".png"
+                filename = "img"+str(i).zfill(ndigits)+".png"
         # self.vectorToFile(x_im,self.__shape,filename)
-            imgrec = Image.fromarray(np.uint8(x_im), 'L')
-            imgrec.save(filename)
+                imgrec = Image.fromarray(np.uint8(x_im), 'L')
+                imgrec.save(filename)
 
-        os.system("ffmpeg -r 10 -i img%0"+str(ndigits)+"d.png -vcodec mpeg4 -y a.mp4")
+            os.system("ffmpeg -r 10 -i img%0"+str(ndigits)+"d.png -vcodec mpeg4 -y a.mp4")
     
 #Projeção lexicográfica
     def imageToVector(self,img):
